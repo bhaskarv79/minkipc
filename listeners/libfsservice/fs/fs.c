@@ -300,18 +300,11 @@ int file_fstat(void *req, size_t req_len, void *rsp, size_t rsp_len)
 		my_rsp->ret = -1;
 	} else {
 		my_rsp->buf.st_dev = (uint64_t)buf.st_dev;
-#if !defined(__aarch64__)
-		memcpy(my_rsp->buf.__pad0, buf.__pad0, 4);
-		my_rsp->buf.__st_ino = (uint32_t)buf.__st_ino;
-#endif
 		my_rsp->buf.st_mode = (unsigned int)buf.st_mode;
 		my_rsp->buf.st_nlink = (unsigned int)buf.st_nlink;
 		my_rsp->buf.st_uid = (uint32_t)buf.st_uid;
 		my_rsp->buf.st_gid = (uint32_t)buf.st_gid;
 		my_rsp->buf.st_rdev = (uint64_t)buf.st_rdev;
-#if !defined(__aarch64__)
-		memcpy(my_rsp->buf.__pad3, buf.__pad3, 4);
-#endif
 		my_rsp->buf.st_size = (int64_t)buf.st_size;
 		my_rsp->buf.st_blksize = (uint32_t)buf.st_blksize;
 		my_rsp->buf.st_blocks = (uint64_t)buf.st_blocks;
@@ -323,9 +316,9 @@ int file_fstat(void *req, size_t req_len, void *rsp, size_t rsp_len)
 		my_rsp->buf.st_ctim_nsec = (uint32_t)((struct timespec)buf.st_ctim).tv_nsec;
 		my_rsp->buf.st_ino = (uint64_t)buf.st_ino;
 #if !defined(__aarch64__)
-		memset(my_rsp->buf.__pad0, 0, 4);
+		memset(my_rsp->buf.__pad0, 0, sizeof(my_rsp->buf.__pad0));
 		my_rsp->buf.__st_ino = 0;
-		memset(my_rsp->buf.__pad3, 0, 4);
+		memset(my_rsp->buf.__pad3, 0, sizeof(my_rsp->buf.__pad3));
 #endif
 		my_rsp->ret = 0;
 	}
@@ -363,22 +356,14 @@ int file_lstat(void *req, size_t req_len, void *rsp, size_t rsp_len)
 		my_rsp->ret = -1;
 	} else {
 		my_rsp->buf.st_dev = (uint64_t)buf.st_dev;
-#if !defined(__aarch64__)
-		memcpy(my_rsp->buf.__pad0, buf.__pad0, 4);
-		my_rsp->buf.__st_ino = (uint32_t)buf.__st_ino;
-#endif
 		my_rsp->buf.st_mode = (unsigned int)buf.st_mode;
 		my_rsp->buf.st_nlink = (unsigned int)buf.st_nlink;
 		my_rsp->buf.st_uid = (uint32_t)buf.st_uid;
 		my_rsp->buf.st_gid = (uint32_t)buf.st_gid;
 		my_rsp->buf.st_rdev = (uint64_t)buf.st_rdev;
-#if !defined(__aarch64__)
-		memcpy(my_rsp->buf.__pad3, buf.__pad3, 4);
-#endif
 		my_rsp->buf.st_size = (int64_t)buf.st_size;
 		my_rsp->buf.st_blksize = (uint32_t)buf.st_blksize;
 		my_rsp->buf.st_blocks = (uint64_t)buf.st_blocks;
-
 		my_rsp->buf.st_atim = (uint32_t)((struct timespec)buf.st_atim).tv_sec;
 		my_rsp->buf.st_atim_nsec = (uint32_t)((struct timespec)buf.st_atim).tv_nsec;
 		my_rsp->buf.st_mtim = (uint32_t)((struct timespec)buf.st_mtim).tv_sec;
@@ -387,9 +372,9 @@ int file_lstat(void *req, size_t req_len, void *rsp, size_t rsp_len)
 		my_rsp->buf.st_ctim_nsec = (uint32_t)((struct timespec)buf.st_ctim).tv_nsec;
 		my_rsp->buf.st_ino = (uint64_t)buf.st_ino;
 #if !defined(__aarch64__)
-		memset(my_rsp->buf.__pad0, 0, 4);
+		memset(my_rsp->buf.__pad0, 0, sizeof(my_rsp->buf.__pad0));
 		my_rsp->buf.__st_ino = 0;
-		memset(my_rsp->buf.__pad3, 0, 4);
+		memset(my_rsp->buf.__pad3, 0, sizeof(my_rsp->buf.__pad3));
 #endif
 		my_rsp->ret = 0;
 	}
