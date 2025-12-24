@@ -34,6 +34,11 @@ if(BUILD_GPFS_LISTENER)
 		PRIVATE -DGPFS_LISTENER)
 endif()
 
+if(BUILD_GPT_LISTENER)
+	target_compile_definitions(${PROJECT_NAME}
+		PRIVATE -DGPT_LISTENER)
+endif()
+
 # ''Headers and dependencies''.
 
 target_link_libraries(${PROJECT_NAME}

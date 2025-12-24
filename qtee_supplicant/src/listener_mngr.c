@@ -42,6 +42,14 @@ static struct listener_svc listeners[] = {
 		.lib_handle = NULL,
 	},
 #endif
+#ifdef GPT_LISTENER
+	{
+		.service_name = "gpt service",
+		.is_registered = false,
+		.file_name = "libgptservice.so.1",
+		.lib_handle = NULL,
+	},
+#endif
 };
 
 /**
