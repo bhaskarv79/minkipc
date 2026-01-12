@@ -31,6 +31,13 @@ endif()
 
 include_directories(${QCOMTEE_INCLUDE_DIRS})
 
+set(QCBOR_DIR_HINT "" CACHE PATH "Hint path for QCBOR directory")
+
+find_package(QCBOR REQUIRED)
+if(NOT QCBOR_FOUND)
+       message(FATAL_ERROR "QCBOR not found")
+endif()
+
 # ''Source files''.
 
 set(SRC
@@ -61,6 +68,7 @@ target_include_directories(minkadaptor
 
 target_link_libraries(minkadaptor
 	PRIVATE ${QCOMTEE_LIBRARIES}
+	PRIVATE ${QCBOR_LIBRARIES}
 	PRIVATE ${CMAKE_THREAD_LIBS_INIT}
 )
 
