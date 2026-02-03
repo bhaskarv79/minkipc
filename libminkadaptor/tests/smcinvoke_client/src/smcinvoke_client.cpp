@@ -591,6 +591,9 @@ static int sendCommand(uint32_t cmdId, Object appLegacy, bool b32)
 	switch (cmdId) {
 	case CLIENT_CMD5_RUN_GPFS_TEST:
 	case CLIENT_CMD6_RUN_FS_TEST:
+	case CLIENT_CMD14_RUN_RPMB_PROV:
+	case CLIENT_CMD15_RUN_RPMB_ERASE:
+	case CLIENT_CMD17_RUN_RPMB_RW:
 		ret = IAppLegacyTest_handleRequest(appLegacy, req, reqLen, &smplap_rsp, sizeof(smplap_rsp), &rspSizeOut);
 		if (ret) break;
 		SILENT_TRUE(rspSizeOut == sizeof(smplap_rsp));

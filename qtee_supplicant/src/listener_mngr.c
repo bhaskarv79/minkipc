@@ -42,6 +42,14 @@ static struct listener_svc listeners[] = {
 		.lib_handle = NULL,
 	},
 #endif
+#ifdef RPMB_LISTENER
+	{
+		.service_name = "rpmb service",
+		.is_registered = false,
+		.file_name = "librpmbservice.so.1",
+		.lib_handle = NULL,
+	},
+#endif
 };
 
 /**

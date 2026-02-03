@@ -18,6 +18,8 @@ option(BUILD_GPFS_LISTENER "Build GP File system Listener" TRUE)
 option(USE_GLIB "Use GLIB functions" FALSE)
 # Use pkg-config for discovering install target directory
 option(CFG_USE_PKGCONFIG "Use pkg-config for discovering install target directory for systemd and udev files." OFF)
+# Build RPMB listener
+option(BUILD_RPMB_LISTENER "Build RPMB Listener" TRUE)
 
 include(GNUInstallDirs)
 
@@ -59,4 +61,8 @@ endif()
 
 if(BUILD_FS_LISTENER OR BUILD_GPFS_LISTENER)
 	add_subdirectory(listeners/libfsservice)
+endif()
+
+if(BUILD_RPMB_LISTENER)
+	add_subdirectory(listeners/librpmbservice)
 endif()
