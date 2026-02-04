@@ -3,7 +3,7 @@
 [Unit]
 Description=QTEE Supplicant Service
 BindsTo=dev-tee0.device
-After=dev-tee0.device
+After=dev-tee0.device sfsconfig.service
 
 [Service]
 Type=exec

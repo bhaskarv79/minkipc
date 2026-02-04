@@ -26,6 +26,7 @@ include(GNUInstallDirs)
 set(MINKIDLC_BIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/idlc" CACHE PATH "Directory containing the idlc executable")
 set(SYSTEMD_UNIT_DIR "" CACHE PATH "Directory containing the systemd unit path")
 set(UDEV_DIR "" CACHE PATH "Directory containing the UDEV path")
+set(MINKIPC_LIBEXEC_DIR "" CACHE PATH "Directory containing the libexec script/binaries path")
 
 if ("${MINKIDLC_BIN_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}/idlc")
 	file(DOWNLOAD
