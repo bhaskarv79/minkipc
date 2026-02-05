@@ -29,6 +29,7 @@ static char *gp_whitelist_paths[] = {
 
 bool is_persist_partition_mounted(void)
 {
+	bool ret = false;
 	FILE *f;
 	struct mntent *entry;
 
@@ -39,14 +40,16 @@ bool is_persist_partition_mounted(void)
 
 	while ((entry = getmntent(f))) {
 		if (strcmp(entry->mnt_dir, PERSIST_MOUNT_PATH) == 0) {
-			return true;
+			ret = true;
+			goto exit;
 		}
 	}
-	endmntent(f);
+	MSGE("Persist partition not mounted!\n");
 
 exit:
-	MSGE("Persist partition not mounted!\n");
-	return false;
+	if (f)
+		endmntent(f);
+	return ret;
 }
 
 int check_dir_path(const char *path)
