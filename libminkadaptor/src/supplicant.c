@@ -21,6 +21,30 @@ extern int recv_ioctl(int, int, void *, uint32_t *);
 extern int recv(void);
 extern int recv_skip(void);
 
+static inline uintptr_t get_pc_from_ucontext(ucontext_t *ucontext) {
+#if defined(__arm__) || defined(__aarch32__)  // ARM32
+#if defined(__GLIBC__)
+    return (uintptr_t)ucontext->uc_mcontext.arm_pc;
+#else
+    return (uintptr_t)ucontext->uc_mcontext.pc;
+#endif
+#else  // ARM64
+    return (uintptr_t)ucontext->uc_mcontext.pc;
+#endif
+}
+
+static inline void set_pc_in_ucontext(ucontext_t *ucontext, uintptr_t new_pc) {
+#if defined(__arm__) || defined(__aarch32__)  // ARM32
+#if defined(__GLIBC__)
+    ucontext->uc_mcontext.arm_pc = new_pc;
+#else
+    ucontext->uc_mcontext.pc = new_pc;
+#endif
+#else  // ARM64
+    ucontext->uc_mcontext.pc = new_pc;
+#endif
+}
+
 /**
  * @brief Signal handler for terminating the supplicant thread
  *
@@ -40,14 +64,14 @@ static void supplicant_kill_handler(int sig, siginfo_t *info, void *context)
 	(void)info;
 
 	ucontext_t *ucontext = (ucontext_t *)context;
-	uint64_t pc_current = (uint64_t)ucontext->uc_mcontext.pc;
-	uint64_t addr_recv_ioctl = (uint64_t)recv_ioctl;
-	uint64_t addr_recv = (uint64_t)recv;
+	uintptr_t pc_current = get_pc_from_ucontext(ucontext);
+	uintptr_t addr_recv_ioctl = (uintptr_t)recv_ioctl;
+	uintptr_t addr_recv = (uintptr_t)recv;
 
 	if (sig == SIGUSR1) {
 		/* Are we just about to enter the syscall? Skip! */
 		if (addr_recv_ioctl <= pc_current && pc_current <= addr_recv)
-			ucontext->uc_mcontext.pc = (uint64_t)recv_skip;
+			set_pc_in_ucontext(ucontext, (uintptr_t)recv_skip);
 		else
 			sig_pending = 1;
 	}

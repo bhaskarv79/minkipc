@@ -69,7 +69,7 @@ static int test_read_file(const char *filename, char **buffer, size_t *size)
 		goto out;
 	}
 
-	printf("File %s, size: %lu Bytes.\n", filename, file_size);
+	printf("File %s, size: %zu Bytes.\n", filename, file_size);
 
 	if (fread(file_buf, 1, file_size, file) != file_size) {
 		printf("fread.\n");

@@ -24,6 +24,14 @@ QList
 #define __QLIST_H_
 
 #include <assert.h>
+#include <stddef.h>
+
+#ifndef container_of
+#define container_of(ptr, type, member) ({ \
+		const typeof(((type *)0)->member)*__mptr = (ptr);  \
+		(type *)((void *)__mptr - offsetof(type, member)); \
+		})
+#endif
 
 typedef struct QNode QNode;
 struct QNode {

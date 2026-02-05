@@ -355,7 +355,7 @@ static bool is_mem_obj_equal(Object mo1, Object mo2)
 	/* The memory represented by a memory object is mmap'd only once, hence
 	 * the same memory object can never be backed by two different address
 	 */
-	if (((uint64_t)mo1_addr == (uint64_t)mo2_addr) &&
+	if (((uintptr_t)mo1_addr == (uintptr_t)mo2_addr) &&
 	    (mo1_size == mo2_size))
 		return true;
 

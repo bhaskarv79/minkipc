@@ -99,7 +99,7 @@ static bool signal_waiter_item(QList *list, uint32_t code, uint32_t events)
 
 	QLIST_FOR_ALL(list, node)
 	{
-		l_item = (list_item *)node;
+		l_item = container_of(node, list_item, qn);
 		if (l_item->type != TYPE_WAITER_ITEM)
 			continue;
 
@@ -145,7 +145,7 @@ static bool get_signal_item(QList *list, uint32_t code, uint32_t events,
 
 	QLIST_FOR_ALL(list, node)
 	{
-		l_item = (list_item *)node;
+		l_item = container_of(node, list_item, qn);
 		if (l_item->type != TYPE_SIGNAL_ITEM)
 			continue;
 

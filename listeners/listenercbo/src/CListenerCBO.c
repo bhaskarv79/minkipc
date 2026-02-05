@@ -13,6 +13,8 @@
 #include "CListenerCBO.h"
 #include "IListenerCBO_invoke.h"
 
+#include "qlist.h"
+
 #define MSGV printf
 #define MSGD printf
 #define MSGE printf
@@ -35,6 +37,7 @@ static inline void QList_free(QList *list)
 static void signal_waiting_listener(ListenerCBO *me)
 {
 	wait_item *w_item = NULL;
+	QNode *node = NULL;
 
 	if (!me) {
 		MSGE("[%s], cbo is null.", __FUNCTION__);
@@ -47,7 +50,8 @@ static void signal_waiting_listener(ListenerCBO *me)
 		/* Client in the front of the queue, waiting for
 		 * listener is freed first. On the basis of FIFO.
 		 */
-		w_item = (wait_item *)QList_popLast(&me->list_wait_cond);
+		node = QList_popLast(&me->list_wait_cond);
+		w_item = container_of(node, wait_item, qn);
 		pthread_cond_signal(&w_item->wait_cond);
 	}
 
