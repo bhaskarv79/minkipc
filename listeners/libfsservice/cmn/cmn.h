@@ -32,8 +32,8 @@
 #define LEGACY_DATA_PATH        "/data/misc/qsee/"
 #define LEGACY_PERSIST_PATH     "/persist/data/"
 #define DATA_PATH               "/var/tmp/qtee_supplicant/vendor/tzstorage/"
-#define PERSIST_PATH            "/var/persist/qtee_supplicant/"
-#define PERSIST_MOUNT_PATH      "/var/persist"
+#define PERSIST_PATH            "/var/lib/tee/qtee_supplicant/"
+#define PERSIST_MOUNT_PATH      "/var/lib/tee"
 
 /* Secure File System - version 2 */
 #define GP_FS_VERSION           2
