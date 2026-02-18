@@ -122,15 +122,15 @@ static int ufs_bsg_ioctl(int fd, struct ufs_bsg_request *req,
 	sg_io.protocol = BSG_PROTOCOL_SCSI;
 	sg_io.subprotocol = BSG_SUB_PROTOCOL_SCSI_TRANSPORT;
 	sg_io.request_len = sizeof(*req);
-	sg_io.request = (__u64)req;
-	sg_io.response = (__u64)rsp;
+	sg_io.request = (__u64)(uintptr_t)req;
+	sg_io.response = (__u64)(uintptr_t)rsp;
 	sg_io.max_response_len = sizeof(*rsp);
 	if (dir == BSG_IOCTL_DIR_FROM_DEV) {
 		sg_io.din_xfer_len = buf_len;
-		sg_io.din_xferp = (__u64)(buf);
+		sg_io.din_xferp = (__u64)(uintptr_t)(buf);
 	} else {
 		sg_io.dout_xfer_len = buf_len;
-		sg_io.dout_xferp = (__u64)(buf);
+		sg_io.dout_xferp = (__u64)(uintptr_t)(buf);
 	}
 
 	ret = ioctl(fd, SG_IO, &sg_io);
@@ -287,15 +287,15 @@ static int scsi_bsg_ioctl(int fd, __u8 *cdb, __u8 cdb_len, void *buf,
 	sg_io.protocol = BSG_PROTOCOL_SCSI;
 	sg_io.subprotocol = BSG_SUB_PROTOCOL_SCSI_CMD;
 	sg_io.request_len = cdb_len;
-	sg_io.request = (__u64)cdb;
-	sg_io.response = (__u64)sense_buf;
+	sg_io.request = (__u64)(uintptr_t)cdb;
+	sg_io.response = (__u64)(uintptr_t)sense_buf;
 	sg_io.max_response_len = SENSE_BUF_LEN;
 	if (dir == BSG_IOCTL_DIR_FROM_DEV) {
 		sg_io.din_xfer_len = (__u32)buf_len;
-		sg_io.din_xferp = (__u64)buf;
+		sg_io.din_xferp = (__u64)(uintptr_t)buf;
 	} else {
 		sg_io.dout_xfer_len = (__u32)buf_len;
-		sg_io.dout_xferp = (__u64)buf;
+		sg_io.dout_xferp = (__u64)(uintptr_t)buf;
 	}
 
 	ret = ioctl(fd, SG_IO, &sg_io);
@@ -461,8 +461,8 @@ int rpmb_ufs_read(uint32_t *req_buf, uint32_t blk_cnt, uint32_t *resp_buf,
 		}
 
 		/* Select the next RPMB frame */
-		req_buf_offset = (uint32_t*) ((uint8_t*)req_buf_offset + RPMB_BLK_SIZE);
-		resp_buf = (uint32_t*) ((uint8_t*)resp_buf + (temp_blk_cnt * RPMB_BLK_SIZE));
+		req_buf_offset = (uint32_t*) ((void*)((uint8_t*)req_buf_offset + RPMB_BLK_SIZE));
+		resp_buf = (uint32_t*) ((void*)((uint8_t*)resp_buf + (temp_blk_cnt * RPMB_BLK_SIZE)));
 		blk_cnt_rem -= temp_blk_cnt;
 	}
 
@@ -572,7 +572,7 @@ static int rpmb_ufs_write_with_timeout(uint32_t *req_buf, uint32_t blk_cnt, uint
 		}
 
 		/* Select the next RPMB frame */
-		req_buf = (uint32_t*) ((uint8_t*)req_buf + (frames_per_rpmb_trans * RPMB_BLK_SIZE));
+		req_buf = (uint32_t*) ((void*)((uint8_t*)req_buf + (frames_per_rpmb_trans * RPMB_BLK_SIZE)));
 	}
 
 out:

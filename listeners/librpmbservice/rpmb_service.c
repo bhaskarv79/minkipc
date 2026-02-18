@@ -187,8 +187,8 @@ static int rpmb_handle_rw_req(void *req, void *rsp)
 		rpmb.init_done = 1;
 	}
 
-	uint32_t *rpmb_req_buf = (uint32_t*)((uint8_t*)req + rw_req_ptr->req_buff_offset);
-	uint32_t *rpmb_resp_buf = (uint32_t*)((uint8_t*)rsp + sizeof(tz_rpmb_rw_res_t));
+	void *rpmb_req_buf = (void*)((uint8_t*)req + rw_req_ptr->req_buff_offset);
+	void *rpmb_resp_buf = (void*)((uint8_t*)rsp + sizeof(tz_rpmb_rw_res_t));
 
 	switch(rw_req_ptr->cmd_id) {
 		case TZ_CM_CMD_RPMB_READ:
