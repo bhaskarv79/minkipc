@@ -7,6 +7,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -292,7 +293,59 @@ static rpmb_result_t emmc_write_impl(uint32_t *request_buf, uint32_t block_count
 	return RPMB_RESULT_OK;
 }
 
-/* Legacy function implementations for backward compatibility */
+/**
+ * rpmb_emmc_probe() - Probe for an eMMC RPMB device
+ *
+ * Scans /dev/ for any entry that matches the pattern mmcblk*rpmb and
+ * attempts to open it.  Scanning dynamically means mmcblk0rpmb,
+ * mmcblk1rpmb, mmcblk2rpmb, … are all discovered without hardcoding
+ * individual paths.
+ *
+ * Return: EMMC_RPMB if an eMMC RPMB device is found and accessible,
+ *         NO_DEVICE otherwise
+ */
+device_id_type rpmb_emmc_probe(void)
+{
+	DIR *dir;
+	struct dirent *ent;
+	char path[PATH_MAX];
+	size_t len;
+	int fd;
+
+	dir = opendir("/dev");
+	if (!dir) {
+		RPMB_LOG_DEBUG("eMMC probe: cannot open /dev (err %d)\n",
+			       errno);
+		return NO_DEVICE;
+	}
+
+	while ((ent = readdir(dir)) != NULL) {
+		len = strlen(ent->d_name);
+
+		/* Must start with "mmcblk" and end with "rpmb" */
+		if (strncmp(ent->d_name, "mmcblk", 6) != 0)
+			continue;
+		if (len < 10 || strcmp(ent->d_name + len - 4, "rpmb") != 0)
+			continue;
+
+		snprintf(path, sizeof(path), "/dev/%s", ent->d_name);
+
+		fd = open(path, O_RDWR);
+		if (fd >= 0) {
+			RPMB_LOG_INFO("eMMC RPMB device found: %s\n", path);
+			close(fd);
+			closedir(dir);
+			return EMMC_RPMB;
+		}
+		RPMB_LOG_DEBUG("eMMC probe: %s not accessible (err %d)\n",
+			       path, errno);
+	}
+
+	closedir(dir);
+	RPMB_LOG_DEBUG("eMMC probe: no device found\n");
+	return NO_DEVICE;
+}
+
 int rpmb_emmc_init(rpmb_init_info_t *rpmb_info)
 {
 	rpmb_device_info_t device_info = {0};

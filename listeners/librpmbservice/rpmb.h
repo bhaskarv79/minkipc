@@ -198,6 +198,7 @@ int rpmb_write(uint32_t *req_buf, uint32_t blk_cnt, uint32_t *resp_buf, uint32_t
  * eMMC rpmb functions. These are meant to be called by the rpmb wrapper
  * functions above based on the rpmb device.
  */
+device_id_type rpmb_emmc_probe(void);
 int rpmb_emmc_init(rpmb_init_info_t *rpmb_info);
 int rpmb_emmc_read(uint32_t *req_buf, uint32_t blk_cnt,
 		uint32_t *resp_buf, uint32_t *resp_len);
@@ -210,6 +211,7 @@ void rpmb_emmc_exit(void);
  * UFS rpmb functions. These are meant to be called by the rpmb wrapper
  * functions above based on the rpmb device.
  */
+device_id_type rpmb_ufs_probe(void);
 int32_t rpmb_ufs_init(rpmb_init_info_t *rpmb_info);
 int32_t rpmb_ufs_read(uint32_t *req_buf, uint32_t blk_cnt,
 		uint32_t *resp_buf, uint32_t *resp_len);
