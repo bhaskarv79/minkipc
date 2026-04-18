@@ -9,6 +9,7 @@
 #include "rpmb_logging.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -337,6 +338,60 @@ int rpmb_ufs_send_request_sense(void)
 
 	rpmb_bsg_dev_close();
 	return ret;
+}
+
+/**
+ * rpmb_ufs_probe() - Probe for a UFS RPMB device
+ *
+ * Scans /dev/bsg/ (then /dev/ as fallback) for any entry whose name
+ * starts with "ufs-bsg" and attempts to open it.  Using a prefix scan
+ * means ufs-bsg, ufs-bsg0, ufs-bsg1, … are all discovered automatically
+ * without hardcoding individual device names.
+ *
+ * Return: UFS_RPMB if a UFS BSG device is found and accessible,
+ *         NO_DEVICE otherwise
+ */
+device_id_type rpmb_ufs_probe(void)
+{
+	static const char * const search_dirs[] = { "/dev/bsg", "/dev", NULL };
+	DIR *dir;
+	struct dirent *ent;
+	char path[PATH_MAX];
+	int fd;
+	int i;
+
+	for (i = 0; search_dirs[i] != NULL; i++) {
+		dir = opendir(search_dirs[i]);
+		if (!dir) {
+			RPMB_LOG_DEBUG("UFS probe: cannot open %s (err %d)\n",
+				       search_dirs[i], errno);
+			continue;
+		}
+
+		while ((ent = readdir(dir)) != NULL) {
+			/* Match any ufs-bsg* node */
+			if (strncmp(ent->d_name, "ufs-bsg", 7) != 0)
+				continue;
+
+			snprintf(path, sizeof(path), "%s/%s",
+				 search_dirs[i], ent->d_name);
+
+			fd = open(path, O_RDWR);
+			if (fd >= 0) {
+				RPMB_LOG_INFO("UFS RPMB device found: %s\n",
+					      path);
+				close(fd);
+				closedir(dir);
+				return UFS_RPMB;
+			}
+			RPMB_LOG_DEBUG("UFS probe: %s not accessible"
+				       " (err %d)\n", path, errno);
+		}
+		closedir(dir);
+	}
+
+	RPMB_LOG_DEBUG("UFS probe: no device found\n");
+	return NO_DEVICE;
 }
 
 int rpmb_ufs_init(rpmb_init_info_t *rpmb_info)
