@@ -35,7 +35,7 @@ set(QCBOR_DIR_HINT "" CACHE PATH "Hint path for QCBOR directory")
 
 find_package(QCBOR REQUIRED)
 if(NOT QCBOR_FOUND)
-       message(FATAL_ERROR "QCBOR not found")
+	message(WARNING "QCBOR not found, falling back to libcbor")
 endif()
 
 # ''Source files''.
@@ -71,11 +71,19 @@ target_include_directories(minkadaptor
 	PRIVATE src
 )
 
-target_link_libraries(minkadaptor
-	PRIVATE ${QCOMTEE_LIBRARIES}
-	PRIVATE ${QCBOR_LIBRARIES}
-	PRIVATE ${CMAKE_THREAD_LIBS_INIT}
-)
+if (QCBOR_FOUND)
+	target_link_libraries(minkadaptor
+		PRIVATE ${QCOMTEE_LIBRARIES}
+		PRIVATE ${QCBOR_LIBRARIES}
+		PRIVATE ${CMAKE_THREAD_LIBS_INIT}
+	)
+else()
+	target_link_libraries(minkadaptor
+		PRIVATE ${QCOMTEE_LIBRARIES}
+		PRIVATE cbor
+		PRIVATE ${CMAKE_THREAD_LIBS_INIT}
+	)
+endif()
 
 # ''Install targets''.
 

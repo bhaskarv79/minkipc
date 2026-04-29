@@ -29,7 +29,12 @@
 #include "MinkCom.h"
 #include "tzecotestapp_uids.h"
 #include "tzt.h"
+#ifdef USE_QCBOR
 #include <qcbor/qcbor.h>
+#else
+#include <cbor.h>
+#include <string.h>
+#endif
 
 int32_t create_and_assign_mem_obj(Object, Object *);
 
@@ -61,6 +66,7 @@ static int64_t get_time_in_ms(void)
 	return (int64_t)(tv.tv_sec * 1000) + (int64_t)(tv.tv_usec / 1000);
 }
 
+#ifdef USE_QCBOR
 static int realloc_useful_buf(UsefulBuf *buf)
 {
 	void *ptr;
@@ -105,6 +111,60 @@ static void* get_self_creds(size_t *buf_len)
 
 	return credential_buf;
 }
+#else
+static void* get_self_creds(size_t *buf_len)
+{
+	cbor_mutable_data buffer = NULL;
+	void *credential_buf = nullptr;
+	cbor_item_t *creds_map = NULL;
+	struct cbor_pair map_pair;
+	size_t buffer_size = CREDENTIALS_BUF_SIZE_INC;
+
+	buffer = (unsigned char *)calloc(buffer_size, sizeof(unsigned char));
+	if (buffer == NULL)
+		return NULL;
+
+	creds_map = cbor_new_definite_map(2);
+	if (creds_map == NULL)
+		goto map_init_fail;
+
+	map_pair.key = cbor_build_uint8(attr_uid);
+	map_pair.value = cbor_build_uint32((uint64_t)getuid());
+	if (!cbor_map_add(creds_map, map_pair))
+		goto map_add_fail;
+
+	map_pair.key = cbor_build_uint8(attr_system_time);
+	map_pair.value = cbor_build_uint64((uint64_t)get_time_in_ms());
+	if (!cbor_map_add(creds_map, map_pair))
+		goto map_add_fail;
+
+        /*
+         * On failure in serialization we jump to map_serialize_fail
+         * because cbor_decref() recursively frees all items already
+         * added to the map. However, if cbor_map_add() fails, we
+         * must manually decref the current key/value as ownership
+         * is not transferred.
+         */
+	buffer_size = cbor_serialize_map(creds_map, buffer, buffer_size);
+	if (buffer_size == 0)
+		goto map_serialize_fail;
+
+	credential_buf = (void *)buffer;
+	*buf_len = buffer_size;
+
+	cbor_decref(&creds_map);
+	return credential_buf;
+
+map_add_fail:
+	cbor_decref(&map_pair.key);
+	cbor_decref(&map_pair.value);
+map_serialize_fail:
+	cbor_decref(&creds_map);
+map_init_fail:
+	free(buffer);
+	return NULL;
+}
+#endif
 
 int32_t create_and_assign_mem_obj(Object root, Object *argptr)
 {
