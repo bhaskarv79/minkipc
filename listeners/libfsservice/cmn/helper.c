@@ -9,6 +9,7 @@
 #include <mntent.h>
 #include <dirent.h>
 #include <libgen.h>
+#include <time.h>
 
 #include "cmn.h"
 #include "helper.h"
@@ -27,9 +28,37 @@ static char *gp_whitelist_paths[] = {
 	"/data/qwes/licenses/"
 };
 
+static bool should_log(void) {
+    static int tokens = 1; // Max burst
+    static long last_time = 0;
+    const int RATE_LIMIT_MS = 5000; // 5 second interval
+    const int MAX_BURST = 1;
+
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    long now = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+
+    // Replenish tokens based on time passed
+    if (now - last_time > RATE_LIMIT_MS) {
+        tokens = MAX_BURST;
+        last_time = now;
+    }
+
+    if (tokens > 0) {
+        tokens--;
+        return true;
+    }
+    return false; // Rate limited
+}
+
+static void rate_limited_log(const char *msg) {
+    if (should_log()) {
+        MSGE("%s", msg);
+    }
+}
+
 bool is_persist_partition_mounted(void)
 {
-	bool ret = false;
 	FILE *f;
 	struct mntent *entry;
 
@@ -39,17 +68,18 @@ bool is_persist_partition_mounted(void)
 	}
 
 	while ((entry = getmntent(f))) {
-		if (strcmp(entry->mnt_dir, PERSIST_MOUNT_PATH) == 0) {
-			ret = true;
+		if (strcmp(entry->mnt_dir, PERSIST_MOUNT_PATH) == 0)
 			goto exit;
-		}
 	}
-	MSGE("Persist partition not mounted!\n");
+	rate_limited_log("WARN: Persist partition not mounted!\n"
+			 "WARN: Writing to root filesystem path /var/lib/tee..\n"
+			 "WARN: Secure files could be lost if root filesystem "
+			 "is corrupted or wiped out by administrator!\n");
 
 exit:
 	if (f)
 		endmntent(f);
-	return ret;
+	return true;
 }
 
 int check_dir_path(const char *path)

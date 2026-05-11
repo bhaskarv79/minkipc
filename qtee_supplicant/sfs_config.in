@@ -11,13 +11,11 @@
 #==============================================================================
 set -e
 
-if [ -e /var/lib/tee ]; then
-    if [ ! -d /var/lib/tee/qtee_supplicant ]; then
-         echo "Creating /var/lib/tee/qtee_supplicant"
-         mkdir -p /var/lib/tee/qtee_supplicant
-    fi
-    chmod o+rwx /var/lib/tee/qtee_supplicant
+if [ ! -d /var/lib/tee/qtee_supplicant ]; then
+    echo "Creating /var/lib/tee/qtee_supplicant"
+    mkdir -p /var/lib/tee/qtee_supplicant
 fi
+chmod o+rwx /var/lib/tee/qtee_supplicant
 
 if [ ! -d /var/lib/qtee_supplicant/vendor/tzstorage ]; then
     echo "Creating /var/lib/qtee_supplicant/vendor/tzstorage"
