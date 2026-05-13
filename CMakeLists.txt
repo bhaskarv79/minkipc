@@ -77,3 +77,8 @@ if (BUILD_PKCS11)
 	endif()
 endif()
 
+# RPMB client test tool (SMCInvoke / MinkIPC interface)
+option(BUILD_RPMB_CLIENT "Build RPMB client test tool" TRUE)
+if (BUILD_RPMB_CLIENT)
+	add_subdirectory(rpmb_client)
+endif()

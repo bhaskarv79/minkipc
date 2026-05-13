@@ -1,0 +1,22 @@
+// Copyright (c) 2022-2025 Qualcomm Technologies, Inc.
+// All Rights Reserved.
+// Confidential and Proprietary - Qualcomm Technologies, Inc.
+// SPDX-License-Identifier: BSD-3-Clause-Clear
+
+/**
+ * @addtogroup CRPMBService
+ * @{
+ * Class CRPMBService implements the \link IRPMBService \endlink interface.
+ *
+ * HLOS clients use this UID with IClientEnv_open() to obtain an
+ * IRPMBService object from QTEE:
+ *
+ *   IClientEnv_open(clientEnv, CRPMBService_UID, &rpmbObj);
+ *
+ * The UID value must match the class ID registered by the RPMB TA
+ * inside QTEE.
+ */
+
+const uint32 CRPMBService_UID = 274;
+
+/** @} */

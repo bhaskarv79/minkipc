@@ -1,0 +1,148 @@
+// Copyright (c) 2022-2025 Qualcomm Technologies, Inc.
+// All Rights Reserved.
+// Confidential and Proprietary - Qualcomm Technologies, Inc.
+// SPDX-License-Identifier: BSD-3-Clause-Clear
+
+/**
+ * IRPMBService — RPMB key provisioning and management interface.
+ *
+ * This interface is implemented by the RPMB Trusted Application running
+ * inside QTEE.  HLOS clients obtain an instance via:
+ *
+ *   IClientEnv_open(clientEnv, CRPMBService_UID, &rpmbObj)
+ *
+ * IMPORTANT — Operation code ordering:
+ *   The method order below is fixed and must match the on-device TA
+ *   (CRPMBService_UID = 274).  The IDL compiler assigns operation codes
+ *   sequentially starting from 0, so the order determines the wire
+ *   protocol:
+ *
+ *     rpmbProvisionKey  → op 0
+ *     rpmbErase         → op 1
+ *     rpmbCheckProv     → op 2
+ *     rpmbRead          → op 3  (extended, not in original TA)
+ *     rpmbWrite         → op 4  (extended, not in original TA)
+ *
+ *   Do NOT reorder the first three methods.
+ */
+/** @cond */
+interface IRPMBService {
+/** @endcond */
+
+  /**
+   * @addtogroup IRPMBService
+   * @{
+   */
+
+  /**
+   * Error codes returned by IRPMBService methods.
+   * Order matches the on-device TA (values start at Object_ERROR_USERBASE=10).
+   */
+  /** @cond */
+  error ERROR_RPMB_MAC;             /**< RPMB MAC verification failed (10) */
+  error ERROR_RPMB_WRITE_COUNTER;   /**< RPMB write counter mismatch (11) */
+  error ERROR_RPMB_ADDR;            /**< RPMB address error (12) */
+  error ERROR_RPMB_WRITE;           /**< RPMB write operation failed (13) */
+  error ERROR_RPMB_READ;            /**< RPMB read operation failed (14) */
+  error ERROR_RPMB_NOT_PROVISIONED; /**< RPMB key has not been provisioned (15) */
+  error ERROR_RPMB_MAC_GENERATION;  /**< RPMB MAC generation failed (16) */
+  error ERROR_RPMB_RNG_GENERATION;  /**< RPMB RNG generation failed (17) */
+  error ERROR_RPMB_NONCE;           /**< RPMB nonce error (18) */
+  error ERROR_RPMB_PROVISIONED;     /**< RPMB key already provisioned (19) */
+  /** @endcond */
+
+  /**
+   * Provision the RPMB authentication key.
+   *
+   * This is a one-time, irreversible operation.  Once the key is
+   * provisioned it cannot be changed or erased.
+   *
+   * Operation code: 0 — MUST remain the first method.
+   *
+   * @param[in] keyType
+   *   0 — Provision the production (OEM) key.
+   *   1 — Provision a test key (for development/validation only).
+   *
+   * @return
+   * Object_OK                             — key provisioned successfully.
+   * IRPMBService_ERROR_RPMB_PROVISIONED   — key already provisioned.
+   * Object_ERROR_INVALID                  — unsupported keyType value.
+   * Object_ERROR                          — provisioning failed.
+   */
+  method rpmbProvisionKey(in int32 keyType);
+
+  /**
+   * Erase the entire RPMB partition.
+   *
+   * All data stored in the RPMB partition is permanently destroyed.
+   * The RPMB authentication key must already be provisioned before
+   * this operation can succeed.
+   *
+   * Operation code: 1 — MUST remain the second method.
+   *
+   * @return
+   * Object_OK                    — partition erased successfully.
+   * IRPMBService_ERROR_RPMB_WRITE — erase (write) operation failed.
+   * Object_ERROR                 — generic failure.
+   */
+  method rpmbErase();
+
+  /**
+   * Check whether the RPMB authentication key has been provisioned and
+   * is valid.
+   *
+   * Operation code: 2 — MUST remain the third method.
+   *
+   * @return
+   * Object_OK                              — key is provisioned and MAC is valid.
+   * IRPMBService_ERROR_RPMB_NOT_PROVISIONED — key has not been provisioned.
+   * IRPMBService_ERROR_RPMB_MAC            — key provisioned but MAC mismatch.
+   */
+  method rpmbCheckProv();
+
+  /**
+   * Read one or more 256-byte blocks from the RPMB partition.
+   *
+   * The RPMB service performs the full authenticated read protocol:
+   * nonce generation, HMAC verification on the device response, and
+   * write-counter validation.  The caller receives only the plaintext
+   * data payload.
+   *
+   * Operation code: 3 — extended method, not present in original TA.
+   *
+   * @param[in]  address     Half-sector address of the first block to read.
+   * @param[in]  blockCount  Number of 256-byte blocks to read (≥ 1).
+   * @param[out] data        Caller-supplied buffer; must be at least
+   *                         blockCount × 256 bytes.
+   *
+   * @return
+   * Object_OK                              — read succeeded; data is valid.
+   * IRPMBService_ERROR_RPMB_NOT_PROVISIONED — key not provisioned.
+   * IRPMBService_ERROR_RPMB_READ           — device returned a read error.
+   * Object_ERROR                           — generic IPC or internal failure.
+   */
+  method rpmbRead(in uint32 address, in uint32 blockCount, out buffer data);
+
+  /**
+   * Write one or more 256-byte blocks to the RPMB partition.
+   *
+   * The RPMB service performs the full authenticated write protocol:
+   * write-counter fetch, HMAC computation over the write frame, and
+   * result-frame verification after the write.
+   *
+   * Operation code: 4 — extended method, not present in original TA.
+   *
+   * @param[in] address     Half-sector address of the first block to write.
+   * @param[in] blockCount  Number of 256-byte blocks to write (≥ 1).
+   * @param[in] data        Data to write; must be exactly blockCount × 256 bytes.
+   *
+   * @return
+   * Object_OK                              — write succeeded.
+   * IRPMBService_ERROR_RPMB_NOT_PROVISIONED — key not provisioned.
+   * IRPMBService_ERROR_RPMB_WRITE          — device returned a write error.
+   * Object_ERROR                           — generic IPC or internal failure.
+   */
+  method rpmbWrite(in uint32 address, in uint32 blockCount, in buffer data);
+
+  /** @} */ /* end_addtogroup IRPMBService */
+};
