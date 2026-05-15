@@ -47,7 +47,7 @@ on:
         value: ${{ jobs.build.outputs.s3_location }}
 
 env:
-  RB3GEN2_ROOTFS_KEY: qcom-multimedia-image-rb3gen2-core-kit.rootfs.qcomflash.tar.gz
+  RB3GEN2_ROOTFS_KEY: qualcomm/qcom-multimedia-image-rb3gen2-core-kit.rootfs.qcomflash.tar.gz
   S3_BUCKET: qli-prd-ssg-gh-artifacts
 
 jobs:

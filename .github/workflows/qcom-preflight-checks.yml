@@ -1,4 +1,4 @@
-name: QuIC Organization Repolinter
+name: Qc Preflight Checks
 
 on:
   push:
