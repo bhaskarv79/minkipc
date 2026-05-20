@@ -8,7 +8,7 @@ on:
         required: true
 
       build_matrix:
-        description: build matrix containing repos
+        description: build matrix containing targets
         type: string
         required: true
 
@@ -47,16 +47,26 @@ on:
         value: ${{ jobs.build.outputs.s3_location }}
 
 env:
-  RB3GEN2_ROOTFS_KEY: qualcomm/qcom-multimedia-image-rb3gen2-core-kit.rootfs.qcomflash.tar.gz
   S3_BUCKET: qli-prd-ssg-gh-artifacts
 
 jobs:
   build:
+    name: Build ${{ matrix.name }}
+
     # If you need the runner group syntax, you can use the block form:
     runs-on:
       group: GHA-SSG-Prd-SelfHosted-RG
       labels: [self-hosted,ssg-prd-u2204-x64-large-od-ephem]
     
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.build_matrix) }}
+
+    env:
+      ROOTFS_KEY: ${{ matrix.rootfs_key }}
+      MODIFIED_TAR_NAME: ${{ matrix.modified_tar_name || inputs.modified_tar_name }}
+      ARTIFACT_DIR: ${{ matrix.artifact_dir || 'MINKIPC_LIBS' }}
+
     outputs:
       workspace_path: ${{ steps.sync.outputs.workspace_path }}
     steps:
@@ -64,6 +74,13 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Show target
+        run: |
+          echo "Building target: ${{ matrix.name }}"
+          echo "Rootfs key: ${{ env.ROOTFS_KEY }}"
+          echo "Artifact dir: ${{ env.ARTIFACT_DIR }}"
+          echo "Modified tar name: ${{ env.MODIFIED_TAR_NAME }}"
 
       - name: Pull docker image
         uses: qualcomm/minkipc/.github/actions/pull_docker_image@main
@@ -290,7 +307,7 @@ jobs:
           ART_DIR="${GITHUB_WORKSPACE}/artifacts"
           mkdir -p "${ART_DIR}"
 
-          MOD_TAR="${ART_DIR}/${{ inputs.modified_tar_name }}"
+          MOD_TAR="${ART_DIR}/${MODIFIED_TAR_NAME}"
 
           # Read normalized top-levels
           IFS=' ' read -r -a TOPLEVELS <<< "${{ steps.orig_tar_meta.outputs.TOPLEVELS }}"
@@ -322,6 +339,7 @@ jobs:
         uses: qualcomm/minkipc/.github/actions/aws_s3_helper@main
         with:
           s3_bucket: qli-prd-ssg-gh-artifacts
+          s3_prefix: ${{ matrix.name }}
           local_file: ${{ github.workspace }}/../artifacts/file_list.txt
           mode: multi-upload
 

@@ -1,0 +1,22 @@
+{
+  "include": [
+    {
+      "name": "rb3gen2",
+      "rootfs_key": "qualcomm/qcom-multimedia-image-rb3gen2-core-kit.rootfs.qcomflash.tar.gz",
+      "modified_tar_name": "ssg-qcom-multimedia-image-rb3gen2-core-kit.rootfs.qcomflash.tar.gz",
+      "artifact_dir": "MINKIPC_LIBS"
+    },
+    {
+      "name": "qcs8300",
+      "rootfs_key": "qualcomm/qcom-multimedia-proprietary-image-qcs8300-ride-sx.rootfs.qcomflash.tar.gz",
+      "modified_tar_name": "ssg-qcom-multimedia-proprietary-image-qcs8300-ride-sx.rootfs.qcomflash.tar.gz",
+      "artifact_dir": "MINKIPC_LIBS"
+    },
+    {
+      "name": "qcs9100",
+      "rootfs_key": "qualcomm/qcom-multimedia-proprietary-image-qcs9100-ride-sx.rootfs.qcomflash.tar.gz",
+      "modified_tar_name": "ssg-qcom-multimedia-proprietary-image-qcs9100-ride-sx.rootfs.qcomflash.tar.gz",
+      "artifact_dir": "MINKIPC_LIBS"
+    }
+  ]
+}

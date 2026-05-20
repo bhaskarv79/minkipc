@@ -1,4 +1,3 @@
----
 name: Load Parameters
 description: Load parameters for the build job
 
@@ -17,23 +16,34 @@ runs:
         script: |
           const fs = require('fs');
           const path = require('path');
-          const ConfigPath = path.join(process.env.GITHUB_WORKSPACE, 'ci', 'CONFIG.json');
+
+          const ConfigPath = path.join(process.env.GITHUB_WORKSPACE, 'ci', 'build_matrix.json');
           let Config;
+
           try {
             if (!fs.existsSync(ConfigPath)) {
-              core.setFailed(`CONFIG.json not found at ${ConfigPath}`);
+              core.setFailed(`build_matrix.json not found at ${ConfigPath}`);
               return;
             }
             Config = JSON.parse(fs.readFileSync(ConfigPath, 'utf-8'));
           } catch (err) {
-            core.setFailed(`Failed to load or parse CONFIG.json: ${err.message}`);
+            core.setFailed(`Failed to load or parse build_matrix.json: ${err.message}`);
             return;
           }
-          // Build matrix: os, kernel, firmware
-          const build_matrix = Object.values(Config).map(obj => Object.fromEntries(Object.entries(obj)));
+
+          // build_matrix.json must already be in the form:
+          // { "include": [ ... ] }
+          if (!Config || !Array.isArray(Config.include)) {
+            core.setFailed('build_matrix.json must contain an "include" array');
+            return;
+          }
+
+          const build_matrix = Config;
+
+          console.log(JSON.stringify(build_matrix, null, 2));
           core.setOutput('build_matrix', JSON.stringify(build_matrix));
           console.log("Build Matrix:", build_matrix);
-          // summary
+
           const md = [
             '# Repositories to build',
             '',
@@ -41,4 +51,5 @@ runs:
             JSON.stringify(build_matrix, null, 2),
             '```'
           ].join('\n');
+
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');
