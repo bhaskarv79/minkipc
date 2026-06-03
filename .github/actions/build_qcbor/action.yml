@@ -7,7 +7,7 @@ inputs:
     required: true
     default: ssg-image:v1.0
   event_name:
-    description: Event type that triggered the workflow (e.g., pull_request_target, push, workflow_call)
+    description: Event type that triggered the workflow (e.g., pull_request, push, workflow_call)
     required: true
 
 outputs:
