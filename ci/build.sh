@@ -13,8 +13,8 @@ USER_NAME="${USER_NAME:-}"
 DOCKER_IMAGE="ssg-image:v1.0"
 
 AWS_REGION="us-west-2"
-ECR_REGISTRY="533423057806.dkr.ecr.us-west-2.amazonaws.com"
-ECR_REPO="ssg-image"
+ECR_REGISTRY="418295714268.dkr.ecr.us-west-2.amazonaws.com"
+ECR_REPO="ssg"
 
 IMAGE_NAME="ssg-image"
 TAG="v1.0"
