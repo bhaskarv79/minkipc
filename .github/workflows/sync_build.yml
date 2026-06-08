@@ -123,24 +123,25 @@ jobs:
           echo "${{ github.workspace }}/Mink_artifacts.tar.xz" >> $workspace/../artifacts/file_list.txt
 
       # --- Rootfs image handling ---
-      - name: Verify RB3 Gen2 rootfs image exists in S3
+      - name: Verify rootfs image exists in S3
         shell: bash
         run: |
           set -euxo pipefail
           aws s3api head-object \
-            --bucket "${{ env.S3_BUCKET }}" \
-            --key "${{ env.RB3GEN2_ROOTFS_KEY }}" \
+            --bucket "${S3_BUCKET}" \
+            --key "${ROOTFS_KEY}" \
             >/dev/null 2>&1 || {
-              echo "ERROR: S3 key ${{ env.RB3GEN2_ROOTFS_KEY }} not found in bucket ${{ env.S3_BUCKET }}." >&2
+              echo "ERROR: S3 key ${ROOTFS_KEY} not found in bucket ${S3_BUCKET}." >&2
               exit 1
             }
 
-      - name: Download RB3 Gen2 rootfs image
+      - name: Download rootfs image
         shell: bash
         run: |
           set -euxo pipefail
-          aws s3 cp "s3://${{ env.S3_BUCKET }}/${{ env.RB3GEN2_ROOTFS_KEY }}" .
-          ls -lh "./qcom-multimedia-image-rb3gen2-core-kit.rootfs.qcomflash.tar.gz"
+          aws s3 cp "s3://${S3_BUCKET}/${ROOTFS_KEY}" .
+          ROOTFS_TAR="$(basename "${ROOTFS_KEY}")"
+          ls -lh "./${ROOTFS_TAR}"
 
       # --- Normalize & record original tar top-level entries ---
       - name: Inspect original tar top-level entries (normalized)
@@ -148,33 +149,36 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          ORIG_TAR="./qcom-multimedia-image-rb3gen2-core-kit.rootfs.qcomflash.tar.gz"
+          ROOTFS_TAR="$(basename "${ROOTFS_KEY}")"
+
           mapfile -t TOPLEVELS < <(
-            tar -tzf "${ORIG_TAR}" \
+            tar -tzf "${ROOTFS_TAR}" \
             | sed -E 's#^\./##' \
             | awk -F/ '{print $1}' \
             | awk 'NF && $0!="."' \
             | sort -u
           )
+
           if [ ${#TOPLEVELS[@]} -eq 0 ]; then
             echo "ERROR: No entries found in original tar" >&2
             exit 1
           fi
+
           echo "Original tar normalized top-level entries:"
           printf '%s\n' "${TOPLEVELS[@]}"
           echo "TOPLEVELS=${TOPLEVELS[*]}" >> "$GITHUB_OUTPUT"
 
-      - name: Extract RB3 Gen2 rootfs image (non-destructive)
+      - name: Extract rootfs image (non-destructive)
         shell: bash
         run: |
           set -euxo pipefail
-          # Extract directly into current workspace (no extra 'rootfs/' folder)
-          tar -xzf qcom-multimedia-image-rb3gen2-core-kit.rootfs.qcomflash.tar.gz
+          ROOTFS_TAR="$(basename "${ROOTFS_KEY}")"
+
+          tar -xzf "${ROOTFS_TAR}"
           echo "Extracted files (workspace top-level):"
           ls -la | sed -n '1,200p'
           echo "Expected top-level entries from original tar:"
           echo "${{ steps.orig_tar_meta.outputs.TOPLEVELS }}"
-
       # --- Locate rootfs image and capture mtime BEFORE modification ---
       - name: Locate rootfs image
         id: locate_img
@@ -338,7 +342,7 @@ jobs:
         id: upload-artifacts
         uses: qualcomm/minkipc/.github/actions/aws_s3_helper@main
         with:
-          s3_bucket: qli-prd-ssg-gh-artifacts
+          s3_bucket: ${{ env.S3_BUCKET }}
           s3_prefix: ${{ matrix.name }}
           local_file: ${{ github.workspace }}/../artifacts/file_list.txt
           mode: multi-upload
