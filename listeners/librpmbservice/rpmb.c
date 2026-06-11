@@ -119,16 +119,22 @@ void rpmb_init_wakelock(void)
 
 void rpmb_wakelock(void)
 {
-	if (g_wakelock.lock_fd >= 0)
-		(void)write(g_wakelock.lock_fd, WAKELOCK_NAME,
-			    (size_t)g_wakelock.name_len);
+	if (g_wakelock.lock_fd >= 0) {
+		ssize_t ret = write(g_wakelock.lock_fd, WAKELOCK_NAME,
+				    (size_t)g_wakelock.name_len);
+		if (ret != g_wakelock.name_len)
+			RPMB_LOG_WARN("Failed to acquire wakelock\n");
+	}
 }
 
 void rpmb_wakeunlock(void)
 {
-	if (g_wakelock.unlock_fd >= 0)
-		(void)write(g_wakelock.unlock_fd, WAKELOCK_NAME,
-			    (size_t)g_wakelock.name_len);
+	if (g_wakelock.unlock_fd >= 0) {
+		ssize_t ret = write(g_wakelock.unlock_fd, WAKELOCK_NAME,
+				    (size_t)g_wakelock.name_len);
+		if (ret != g_wakelock.name_len)
+			RPMB_LOG_WARN("Failed to release wakelock\n");
+	}
 }
 
 /* -----------------------------------------------------------------------

@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -229,40 +230,49 @@ int rpmb_emmc_read(uint32_t *req_buf, uint32_t blk_cnt,
 		   uint32_t *resp_buf, uint32_t *resp_len)
 {
 	/*
-	 * Stack-allocate the multi-cmd struct (2 commands).
-	 * mmc_ioc_multi_cmd has a flexible array member, so we use a
-	 * wrapper struct to give it the right size on the stack.
+	 * mmc_ioc_multi_cmd ends in a flexible array member (cmds[]), so it
+	 * must be heap-allocated with room for the commands we use. A stack
+	 * wrapper struct does not work: GCC's -Warray-bounds (under -O2)
+	 * traces cmds[1] back to the fixed-size wrapper and errors out.
+	 * Heap allocation sizes the array at runtime, which the static
+	 * checker cannot flag. This matches the mmc-utils reference idiom.
 	 */
-	struct {
-		struct mmc_ioc_multi_cmd multi;
-		struct mmc_ioc_cmd extra[1]; /* room for cmd[1] */
-	} mc;
+	const uint32_t num_cmds = 2;
+	struct mmc_ioc_multi_cmd *mc;
+	struct mmc_ioc_cmd *cmds;
 	int ret;
+
+	mc = calloc(1, sizeof(*mc) + num_cmds * sizeof(struct mmc_ioc_cmd));
+	if (!mc) {
+		RPMB_LOG_ERROR("eMMC RPMB read: out of memory\n");
+		*resp_len = 0;
+		return -1;
+	}
+	cmds = mc->cmds;
 
 	rpmb_wakelock();
 
-	memset(&mc, 0, sizeof(mc));
-	mc.multi.num_of_cmds = 2;
+	mc->num_of_cmds = num_cmds;
 
 	/* CMD25 -- write 1 request frame */
-	mc.multi.cmds[0].write_flag = 1;
-	mc.multi.cmds[0].opcode = MMC_WRITE_MULTIPLE_BLOCK;
-	mc.multi.cmds[0].arg = 0;
-	mc.multi.cmds[0].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
-	mc.multi.cmds[0].blksz = RPMB_BLK_SIZE;
-	mc.multi.cmds[0].blocks = RPMB_MIN_BLK_CNT;
-	mmc_ioc_cmd_set_data(mc.multi.cmds[0], req_buf);
+	cmds[0].write_flag = 1;
+	cmds[0].opcode = MMC_WRITE_MULTIPLE_BLOCK;
+	cmds[0].arg = 0;
+	cmds[0].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+	cmds[0].blksz = RPMB_BLK_SIZE;
+	cmds[0].blocks = RPMB_MIN_BLK_CNT;
+	mmc_ioc_cmd_set_data(cmds[0], req_buf);
 
 	/* CMD18 -- read blk_cnt response frames */
-	mc.multi.cmds[1].write_flag = 0;
-	mc.multi.cmds[1].opcode = MMC_READ_MULTIPLE_BLOCK;
-	mc.multi.cmds[1].arg = 0;
-	mc.multi.cmds[1].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
-	mc.multi.cmds[1].blksz = RPMB_BLK_SIZE;
-	mc.multi.cmds[1].blocks = blk_cnt;
-	mmc_ioc_cmd_set_data(mc.multi.cmds[1], resp_buf);
+	cmds[1].write_flag = 0;
+	cmds[1].opcode = MMC_READ_MULTIPLE_BLOCK;
+	cmds[1].arg = 0;
+	cmds[1].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+	cmds[1].blksz = RPMB_BLK_SIZE;
+	cmds[1].blocks = blk_cnt;
+	mmc_ioc_cmd_set_data(cmds[1], resp_buf);
 
-	ret = ioctl(rpmb.fd, MMC_IOC_MULTI_CMD, &mc.multi);
+	ret = ioctl(rpmb.fd, MMC_IOC_MULTI_CMD, mc);
 
 	if (ret) {
 		RPMB_LOG_ERROR("eMMC RPMB read ioctl failed: %s\n",
@@ -272,6 +282,7 @@ int rpmb_emmc_read(uint32_t *req_buf, uint32_t blk_cnt,
 		*resp_len = blk_cnt * RPMB_BLK_SIZE;
 	}
 
+	free(mc);
 	rpmb_wakeunlock();
 	return ret;
 }
@@ -293,14 +304,14 @@ int rpmb_emmc_write(uint32_t *req_buf, uint32_t blk_cnt,
 {
 	struct rpmb_frame result_frame;
 	/*
-	 * Stack-allocate the multi-cmd struct (3 commands).
-	 * mmc_ioc_multi_cmd has a flexible array (cmds[0]), so the wrapper
-	 * struct gives us room for cmds[0], cmds[1], and cmds[2].
+	 * mmc_ioc_multi_cmd ends in a flexible array member (cmds[]), so it
+	 * must be heap-allocated with room for the commands we use. See the
+	 * note in rpmb_emmc_read() -- a stack wrapper trips -Warray-bounds
+	 * under -O2; runtime allocation does not.
 	 */
-	struct {
-		struct mmc_ioc_multi_cmd multi;
-		struct mmc_ioc_cmd extra[2];
-	} mc;
+	const uint32_t num_cmds = 3;
+	struct mmc_ioc_multi_cmd *mc;
+	struct mmc_ioc_cmd *cmds;
 	int ret = 0, i, num_rpmb_trans;
 
 	if (frames_per_rpmb_trans == 0) {
@@ -316,6 +327,14 @@ int rpmb_emmc_write(uint32_t *req_buf, uint32_t blk_cnt,
 		return -1;
 	}
 
+	mc = calloc(1, sizeof(*mc) + num_cmds * sizeof(struct mmc_ioc_cmd));
+	if (!mc) {
+		RPMB_LOG_ERROR("eMMC RPMB write: out of memory\n");
+		*resp_len = 0;
+		return -1;
+	}
+	cmds = mc->cmds;
+
 	rpmb_wakelock();
 
 	num_rpmb_trans = blk_cnt / frames_per_rpmb_trans;
@@ -325,39 +344,38 @@ int rpmb_emmc_write(uint32_t *req_buf, uint32_t blk_cnt,
 		      blk_cnt, num_rpmb_trans,
 		      frames_per_rpmb_trans, rpmb.info.rel_wr_count);
 
-	memset(&mc, 0, sizeof(mc));
-	mc.multi.num_of_cmds = 3;
+	mc->num_of_cmds = num_cmds;
 
 	/* CMD25 -- write data frames (reliable write); data ptr set per-loop */
-	mc.multi.cmds[0].write_flag = 1 | SECURE_WRITE;
-	mc.multi.cmds[0].opcode = MMC_WRITE_MULTIPLE_BLOCK;
-	mc.multi.cmds[0].arg = 0;
-	mc.multi.cmds[0].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
-	mc.multi.cmds[0].blksz = RPMB_BLK_SIZE;
-	mc.multi.cmds[0].blocks = frames_per_rpmb_trans;
+	cmds[0].write_flag = 1 | SECURE_WRITE;
+	cmds[0].opcode = MMC_WRITE_MULTIPLE_BLOCK;
+	cmds[0].arg = 0;
+	cmds[0].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+	cmds[0].blksz = RPMB_BLK_SIZE;
+	cmds[0].blocks = frames_per_rpmb_trans;
 
 	/* CMD25 -- write result-read-request frame */
-	mc.multi.cmds[1].write_flag = 1;
-	mc.multi.cmds[1].opcode = MMC_WRITE_MULTIPLE_BLOCK;
-	mc.multi.cmds[1].arg = 0;
-	mc.multi.cmds[1].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
-	mc.multi.cmds[1].blksz = RPMB_BLK_SIZE;
-	mc.multi.cmds[1].blocks = RPMB_MIN_BLK_CNT;
+	cmds[1].write_flag = 1;
+	cmds[1].opcode = MMC_WRITE_MULTIPLE_BLOCK;
+	cmds[1].arg = 0;
+	cmds[1].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+	cmds[1].blksz = RPMB_BLK_SIZE;
+	cmds[1].blocks = RPMB_MIN_BLK_CNT;
 
 	/* CMD18 -- read result frame */
-	mc.multi.cmds[2].write_flag = 0;
-	mc.multi.cmds[2].opcode = MMC_READ_MULTIPLE_BLOCK;
-	mc.multi.cmds[2].arg = 0;
-	mc.multi.cmds[2].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
-	mc.multi.cmds[2].blksz = RPMB_BLK_SIZE;
-	mc.multi.cmds[2].blocks = RPMB_MIN_BLK_CNT;
+	cmds[2].write_flag = 0;
+	cmds[2].opcode = MMC_READ_MULTIPLE_BLOCK;
+	cmds[2].arg = 0;
+	cmds[2].flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+	cmds[2].blksz = RPMB_BLK_SIZE;
+	cmds[2].blocks = RPMB_MIN_BLK_CNT;
 
 	for (i = 0; i < num_rpmb_trans; i++) {
-		mmc_ioc_cmd_set_data(mc.multi.cmds[0], req_buf);
-		mmc_ioc_cmd_set_data(mc.multi.cmds[1], &read_result_reg_frame);
-		mmc_ioc_cmd_set_data(mc.multi.cmds[2], resp_buf);
+		mmc_ioc_cmd_set_data(cmds[0], req_buf);
+		mmc_ioc_cmd_set_data(cmds[1], &read_result_reg_frame);
+		mmc_ioc_cmd_set_data(cmds[2], resp_buf);
 
-		ret = ioctl(rpmb.fd, MMC_IOC_MULTI_CMD, &mc.multi);
+		ret = ioctl(rpmb.fd, MMC_IOC_MULTI_CMD, mc);
 		if (ret) {
 			RPMB_LOG_ERROR("eMMC RPMB write ioctl failed at"
 				       " trans %d: %s\n", i, strerror(errno));
@@ -395,6 +413,7 @@ int rpmb_emmc_write(uint32_t *req_buf, uint32_t blk_cnt,
 	else
 		*resp_len = RPMB_MIN_BLK_CNT * RPMB_BLK_SIZE;
 
+	free(mc);
 	rpmb_wakeunlock();
 	return ret;
 }
